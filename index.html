@@ -6,9 +6,6 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <button onclick="downloadDeltaruneSave()" style="position:fixed; top:20px; left:20px; z-index:999999; padding:10px; background:black; color:white; border:2px solid white; cursor:pointer;">
-    DOWNLOAD SAVES
-</button>
 </div>
   <div class="logo-container">
     <img src="logo.png" alt="Logo" class="logo">
@@ -161,54 +158,6 @@
       }
     });
   </script>
-  async function downloadDeltaruneSave() {
-    try {
-        // This opens the exact database you saw in your screenshot
-        const request = indexedDB.open("/idbfs");
-
-        request.onsuccess = (event) => {
-            const db = event.target.result;
-            const transaction = db.transaction("FILE_DATA", "readonly");
-            const store = transaction.objectStore("FILE_DATA");
-            
-            const getAllReq = store.getAll();
-            const getKeysReq = store.getAllKeys();
-
-            getKeysReq.onsuccess = () => {
-                const keys = getKeysReq.result;
-                const items = getAllReq.result;
-                let found = 0;
-
-                keys.forEach((key, i) => {
-                    // This finds the filech4_0 and dr_ini you saw!
-                    if (key.includes("file") || key.includes("dr_") || key.includes("config")) {
-                        found++;
-                        // Convert the database "blob" into a downloadable file
-                        const blob = new Blob([items[i].contents], {type: "application/octet-stream"});
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        // This removes the slashes so it saves as 'filech4_0' instead of '_idbfs_filech4_0'
-                        a.download = key.split('/').pop();
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    }
-                });
-                alert("Success! Found and downloaded " + found + " files.");
-            };
-        };
-        request.onerror = () => alert("Could not open the database.");
-    } catch (e) {
-        alert("Error: " + e.message);
-    }
-}
-</script>
-
-<button onclick="downloadDeltaruneSave()" style="position:fixed; top:10px; left:10px; z-index:999999; padding:10px; background:black; color:white; border:2px solid white; font-family:monospace; cursor:pointer;">
-    💾 DOWNLOAD ALL SAVES
-</button>
-  
 </body>
 </html>
 </body>
