@@ -1,41 +1,69 @@
 async function downloadDeltaruneSave() {
-    // 1. A more complete list of possible Deltarune save names
-    const saveKeys = [
-        'file0', 'file1', 'file2', 'file3', 'file4', 'file5', 'file6', 'file9',
-        'filech3_0', 'filech3_1', 'filech3_2', 'filech3_3',
-        'filech4_0', 'filech4_1', 'filech4_2', 'filech4_3',
-        'dr_ini', 'deltarune_config', 'userconfig', 'keyconfig'
-    ];
-    
-    let foundAny = false;
+    console.log("Starting save search...");
+    let filesToDownload = [];
 
-    for (const key of saveKeys) {
-        const data = localStorage.getItem(key);
-        
-        if (data) {
-            foundAny = true;
-            
-            // Create the download link
-            const blob = new Blob([data], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = key; // No extension, just like Deltarune likes it
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            // Cleanup
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            // 2. IMPORTANT: Add a tiny delay between downloads
-            // Some browsers block "mass downloads" if they happen at the exact same millisecond.
-            await new Promise(resolve => setTimeout(resolve, 200));
+    // 1. Search LocalStorage
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+        if (key.includes('file') || key.includes('dr_') || key.includes('config')) {
+            filesToDownload.push({ name: key, data: localStorage.getItem(key) });
         }
+    });
+
+    // 2. Search IndexedDB (This is where newer GameMaker builds hide data)
+    try {
+        const dbs = await window.indexedDB.databases();
+        for (let dbInfo of dbs) {
+            const db = await new Promise(res => {
+                const req = indexedDB.open(dbInfo.name);
+                req.onsuccess = () => res(req.result);
+            });
+
+            // Usually "FILE_DATA" or "files"
+            const storeNames = Array.from(db.objectStoreNames);
+            for (let storeName of storeNames) {
+                const tx = db.transaction(storeName, "readonly");
+                const store = tx.objectStore(storeName);
+                const allKeys = await new Promise(res => {
+                    const req = store.getAllKeys();
+                    req.onsuccess = () => res(req.result);
+                });
+
+                for (let key of allKeys) {
+                    if (typeof key === 'string' && (key.includes('file') || key.includes('dr_'))) {
+                        const dataReq = store.get(key);
+                        const data = await new Promise(res => {
+                            dataReq.onsuccess = () => res(dataReq.result);
+                        });
+                        filesToDownload.push({ name: key.replace(/\//g, '_'), data: data });
+                    }
+                }
+            }
+            db.close();
+        }
+    } catch (e) {
+        console.log("IndexedDB search skipped or failed: ", e);
     }
 
-    if (!foundAny) {
-        alert("Search complete: No save data found in this browser's LocalStorage. Are you sure you've saved in-game?");
+    // 3. Execute Downloads
+    if (filesToDownload.length === 0) {
+        alert("Search finished: 0 save files found. Try saving in-game again first!");
+        return;
+    }
+
+    alert("Found " + filesToDownload.length + " files. Starting download...");
+
+    for (let file of filesToDownload) {
+        const content = typeof file.data === 'object' ? JSON.stringify(file.data) : file.data;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        await new Promise(r => setTimeout(r, 300)); // Delay to prevent browser blocking
     }
 }
