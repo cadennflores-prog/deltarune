@@ -161,54 +161,45 @@
       }
     });
   </script>
-  async function downloadDeltaruneSave() {
-        console.log("Searching for saves...");
-        try {
-            const dbName = "/idbfs"; 
-            const request = indexedDB.open(dbName);
+  <script>
+async function downloadDeltaruneSave() {
+    try {
+        const request = indexedDB.open("/idbfs");
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("FILE_DATA")) {
+                alert("No save data found. Save in-game first!");
+                return;
+            }
+            const transaction = db.transaction("FILE_DATA", "readonly");
+            const store = transaction.objectStore("FILE_DATA");
+            const getAllReq = store.getAll();
+            const getKeysReq = store.getAllKeys();
 
-            request.onsuccess = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains("FILE_DATA")) {
-                    alert("No save database found. Have you used a Save Point in-game yet?");
-                    return;
-                }
-
-                const transaction = db.transaction("FILE_DATA", "readonly");
-                const store = transaction.objectStore("FILE_DATA");
-                const getAllRequest = store.getAll();
-
-                getAllRequest.onsuccess = () => {
-                    const allItems = getAllRequest.result;
-                    const allKeys = store.getAllKeys();
-
-                    allKeys.onsuccess = () => {
-                        let filesFound = 0;
-                        allKeys.result.forEach((key, index) => {
-                            // This looks for file0, filech3_0, dr_ini, etc.
-                            if (key.includes("file") || key.includes("dr_") || key.includes("config")) {
-                                filesFound++;
-                                const blob = new Blob([allItems[index].contents], {type: "application/octet-stream"});
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = key.split('/').pop(); 
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                            }
-                        });
-                        if (filesFound > 0) alert("Found and downloaded " + filesFound + " save files!");
-                        else alert("No save files found inside the database.");
-                    };
-                };
+            getKeysReq.onsuccess = () => {
+                const keys = getKeysReq.result;
+                const items = getAllReq.result;
+                let found = 0;
+                keys.forEach((key, i) => {
+                    if (key.includes("file") || key.includes("dr_") || key.includes("config")) {
+                        found++;
+                        const blob = new Blob([items[i].contents], {type: "application/octet-stream"});
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = key.split('/').pop();
+                        a.click();
+                    }
+                });
+                if(found > 0) alert("Downloaded " + found + " files!");
             };
-            request.onerror = () => alert("Database access error. Try refreshing.");
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
-    }
-    </script>
+        };
+    } catch (e) { alert("Error: " + e.message); }
+}
+</script>
+
+<button onclick="downloadDeltaruneSave()" style="position:fixed; top:10px; left:10px; z-index:999999; padding:10px; background:black; color:white; border:2px solid white; font-family:monospace;">
+    DOWNLOAD SAVES
+</button>
 </body>
 </html>
 </body>
