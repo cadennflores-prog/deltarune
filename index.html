@@ -6,6 +6,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div style="position:fixed; top:10px; left:10px; z-index:9999; display:flex; gap:10px;">
+    <button onclick="downloadDeltaruneSave()" style="padding:10px; background:#222; color:#fff; border:1px solid #fff; cursor:pointer; font-family:monospace;">
+        💾 DOWNLOAD SAVES
+    </button>
+
+    <input type="file" id="fileUpload" style="display:none;" onchange="uploadSave(this)">
+    <button onclick="document.getElementById('fileUpload').click()" style="padding:10px; background:#222; color:#fff; border:1px solid #fff; cursor:pointer; font-family:monospace;">
+        📂 UPLOAD SAVE
+    </button>
+</div>
   <div class="logo-container">
     <img src="logo.png" alt="Logo" class="logo">
   </div>
@@ -158,4 +168,14 @@
     });
   </script>
 </body>
+  <div style="position:fixed; top:10px; left:10px; z-index:9999; display:flex; gap:10px;">
+    <button onclick="downloadDeltaruneSave()" style="padding:10px; background:#222; color:#fff; border:1px solid #fff; cursor:pointer; font-family:monospace;">
+        💾 DOWNLOAD SAVES
+    </button>
+
+    <input type="file" id="fileUpload" style="display:none;" onchange="uploadSave(this)">
+    <button onclick="document.getElementById('fileUpload').click()" style="padding:10px; background:#222; color:#fff; border:1px solid #fff; cursor:pointer; font-family:monospace;">
+        📂 UPLOAD SAVE
+    </button>
+</div>
 </html>
