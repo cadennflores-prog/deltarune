@@ -1,0 +1,47 @@
+// Function to download all possible Deltarune save files
+function downloadDeltaruneSave() {
+    const saveKeys = [
+        'file0', 'file1', 'file2', 'file3',           // Chapters 1 & 2
+        'filech3_0', 'filech3_1', 'filech3_2',        // Chapter 3
+        'filech4_0', 'filech4_1', 'filech4_2',        // Chapter 4
+        'dr_ini', 'deltarune_config', 'userconfig'    // Settings & Global Progress
+    ];
+    
+    let foundAny = false;
+
+    saveKeys.forEach(key => {
+        const data = localStorage.getItem(key);
+        if (data) {
+            foundAny = true;
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = key; 
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    });
+
+    if (!foundAny) {
+        alert("No saves found! Make sure you have saved at a Save Point in-game first.");
+    }
+}
+
+// Function to upload a save file back into the browser
+function uploadSave(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        const fileName = file.name; 
+        
+        localStorage.setItem(fileName, content);
+        alert("Success! Uploaded " + fileName + ". Please refresh the page to load your save.");
+    };
+    reader.readAsText(file);
+}
