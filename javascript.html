@@ -1,36 +1,62 @@
-function downloadDeltaruneSave() {
-    // 1. Try to get the most common save file
-    const saveData = localStorage.getItem('file0');
-    
-    if (!saveData) {
-        alert("Could not find 'file0' in LocalStorage. Try saving in-game again!");
-        return;
-    }
+fasync function downloadDeltaruneSave() {
+    alert("Attempting to access game memory...");
 
     try {
-        // 2. Create the download link
-        const blob = new Blob([saveData], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        
-        a.style.display = 'none';
-        a.href = url;
-        a.download = 'file0';
-        
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 100);
+        // This is the specific way GameMaker HTML5/Emscripten saves files
+        // It's a "Virtual File System"
+        if (!window.indexedDB) {
+            alert("Your browser doesn't support the database used by this game.");
+            return;
+        }
 
-        alert("Download triggered for file0!");
-    } catch (err) {
-        // 3. Backup: If the download is blocked, show the data in a box
-        console.error(err);
-        const backupWindow = window.open("", "_blank");
-        backupWindow.document.write("<p>Your browser blocked the download. Copy this text into a file named 'file0':</p><textarea style='width:100%;height:80%'>" + saveData + "</textarea>");
+        const dbName = "/idbfs"; // The standard name for gn-math's build
+        const request = indexedDB.open(dbName);
+
+        request.onerror = () => alert("Database access denied. Are you in Incognito mode?");
+        
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("FILE_DATA")) {
+                alert("Game database found, but no save data inside yet. Have you saved in-game?");
+                return;
+            }
+
+            const transaction = db.transaction("FILE_DATA", "readonly");
+            const store = transaction.objectStore("FILE_DATA");
+            const getAllRequest = store.getAll(); // Get everything in the database
+
+            getAllRequest.onsuccess = () => {
+                const allItems = getAllRequest.result;
+                const allKeys = store.getAllKeys();
+
+                allKeys.onsuccess = () => {
+                    let filesFound = 0;
+                    allKeys.result.forEach((key, index) => {
+                        // Look for Deltarune specific files
+                        if (key.includes("file") || key.includes("dr_") || key.includes("config")) {
+                            filesFound++;
+                            const blob = new Blob([allItems[index].contents], {type: "application/octet-stream"});
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = key.split('/').pop(); // Clean up the name
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        }
+                    });
+
+                    if (filesFound === 0) {
+                        alert("Database is empty. Please save your game at a SAVE POINT first!");
+                    } else {
+                        alert("Successfully found and triggered " + filesFound + " files!");
+                    }
+                };
+            };
+        };
+    } catch (e) {
+        alert("CRITICAL ERROR: " + e.message);
+    }
+}
     }
 }
