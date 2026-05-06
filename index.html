@@ -6,42 +6,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="save-manager-ui" style="
-    position: fixed; 
-    top: 20px; 
-    left: 20px; 
-    z-index: 99999999 !important; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px;
-    pointer-events: auto;">
-    
-    <button onclick="downloadDeltaruneSave()" style="
-        padding: 12px 20px; 
-        background: #000; 
-        color: #fff; 
-        border: 2px solid #fff; 
-        cursor: pointer; 
-        font-family: 'Courier New', monospace; 
-        font-weight: bold;
-        box-shadow: 4px 4px 0px #555;">
-        💾 DOWNLOAD SAVES
-    </button>
-
-    <button onclick="document.getElementById('fileUpload').click()" style="
-        padding: 12px 20px; 
-        background: #000; 
-        color: #fff; 
-        border: 2px solid #fff; 
-        cursor: pointer; 
-        font-family: 'Courier New', monospace; 
-        font-weight: bold;
-        box-shadow: 4px 4px 0px #555;">
-        📂 UPLOAD SAVE
-    </button>
-    
-    <input type="file" id="fileUpload" style="display:none;" onchange="uploadSave(this)">
-</div>
+  <button onclick="downloadDeltaruneSave()" style="position:fixed; top:20px; left:20px; z-index:999999; padding:10px; background:black; color:white; border:2px solid white; cursor:pointer;">
+    DOWNLOAD SAVES
+</button>
 </div>
   <div class="logo-container">
     <img src="logo.png" alt="Logo" class="logo">
@@ -194,42 +161,57 @@
       }
     });
   </script>
-</body>
-  <div id="save-manager-ui" style="
-    position: fixed; 
-    top: 20px; 
-    left: 20px; 
-    z-index: 99999999 !important; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px;
-    pointer-events: auto;">
-    
-    <button onclick="downloadDeltaruneSave()" style="
-        padding: 12px 20px; 
-        background: #000; 
-        color: #fff; 
-        border: 2px solid #fff; 
-        cursor: pointer; 
-        font-family: 'Courier New', monospace; 
-        font-weight: bold;
-        box-shadow: 4px 4px 0px #555;">
-        💾 DOWNLOAD SAVES
-    </button>
+  async function downloadDeltaruneSave() {
+        console.log("Searching for saves...");
+        try {
+            const dbName = "/idbfs"; 
+            const request = indexedDB.open(dbName);
 
-    <button onclick="document.getElementById('fileUpload').click()" style="
-        padding: 12px 20px; 
-        background: #000; 
-        color: #fff; 
-        border: 2px solid #fff; 
-        cursor: pointer; 
-        font-family: 'Courier New', monospace; 
-        font-weight: bold;
-        box-shadow: 4px 4px 0px #555;">
-        📂 UPLOAD SAVE
-    </button>
-    
-    <input type="file" id="fileUpload" style="display:none;" onchange="uploadSave(this)">
-</div>
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("FILE_DATA")) {
+                    alert("No save database found. Have you used a Save Point in-game yet?");
+                    return;
+                }
+
+                const transaction = db.transaction("FILE_DATA", "readonly");
+                const store = transaction.objectStore("FILE_DATA");
+                const getAllRequest = store.getAll();
+
+                getAllRequest.onsuccess = () => {
+                    const allItems = getAllRequest.result;
+                    const allKeys = store.getAllKeys();
+
+                    allKeys.onsuccess = () => {
+                        let filesFound = 0;
+                        allKeys.result.forEach((key, index) => {
+                            // This looks for file0, filech3_0, dr_ini, etc.
+                            if (key.includes("file") || key.includes("dr_") || key.includes("config")) {
+                                filesFound++;
+                                const blob = new Blob([allItems[index].contents], {type: "application/octet-stream"});
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = key.split('/').pop(); 
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            }
+                        });
+                        if (filesFound > 0) alert("Found and downloaded " + filesFound + " save files!");
+                        else alert("No save files found inside the database.");
+                    };
+                };
+            };
+            request.onerror = () => alert("Database access error. Try refreshing.");
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    }
+    </script>
+</body>
+</html>
+</body>
+ 
 </div>
 </html>
